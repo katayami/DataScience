@@ -43,22 +43,37 @@ def matrix_statistics(data: RandomMatrixInput) -> MatrixStatistics:
     )
 
 
-def plot_matrix_histograms(statistics: MatrixStatistics) -> None:
-    """Строит гистограммы значений для каждой строки и каждого столбца матрицы."""
+def plot_matrix_histograms(
+    statistics: MatrixStatistics, path: str | None = None, limit: int = 4,
+) -> None:
+    """Строит гистограммы значений для первых limit строк и limit столбцов матрицы.
+
+    Если передан path, график сохраняется в файл, иначе показывается в окне.
+    """
     import matplotlib.pyplot as plt
 
     matrix = statistics.matrix
-    figure, (rows_axis, columns_axis) = plt.subplots(1, 2, figsize=(12, 4))
-    for index, row in enumerate(matrix):
-        rows_axis.hist(row, alpha=0.5, label=f"row {index}")
-    rows_axis.set_title("Rows")
-    rows_axis.legend()
-    for index, column in enumerate(matrix.T):
-        columns_axis.hist(column, alpha=0.5, label=f"column {index}")
-    columns_axis.set_title("Columns")
-    columns_axis.legend()
+    count = min(limit, max(matrix.shape))
+    bins = np.linspace(matrix.min(), matrix.max(), 25)
+    figure, axes = plt.subplots(2, count, figsize=(3.5 * count, 6), squeeze=False, sharex=True)
+    groups = [
+        ("Строка", matrix, statistics.row_means, statistics.row_variances, "tab:blue"),
+        ("Столбец", matrix.T, statistics.column_means, statistics.column_variances, "tab:orange"),
+    ]
+    for axes_row, (name, vectors, means, variances, color) in zip(axes, groups):
+        for index, axis in enumerate(axes_row):
+            if index >= len(vectors):
+                axis.set_visible(False)
+                continue
+            axis.hist(vectors[index], bins=bins, color=color, edgecolor="white")
+            axis.set_title(f"{name} {index}: μ={means[index]:.2f}, σ²={variances[index]:.2f}", fontsize=10)
+    figure.suptitle(f"Гистограммы значений матрицы {matrix.shape[0]}×{matrix.shape[1]}")
     figure.tight_layout()
-    plt.show()
+    if path is None:
+        plt.show()
+    else:
+        figure.savefig(path, dpi=120)
+        plt.close(figure)
 
 
 def chess(data: ChessInput) -> np.ndarray:
